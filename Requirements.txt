@@ -1,7 +1,5 @@
-pip install streamlit
-pip install  requests
-pip install  beautifulsoup4
-pip install  pandas
-pip install  plotly
-pip install beautifulsoup4
-
+streamlit
+requests
+beautifulsoup4
+pandas
+plotly
