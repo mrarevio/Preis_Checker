@@ -1,7 +1,4 @@
 ﻿# Modernisiertes und benutzerfreundliches Preisalarm-Tool mit Tabs & Design
-pip install beautifulsoup4
-
-
 import subprocess
 import sys
 
