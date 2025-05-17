@@ -1,17 +1,4 @@
 ﻿# Modernisiertes und benutzerfreundliches Preisalarm-Tool mit Tabs & Design
-import subprocess
-import sys
-
-def install(package):
-    subprocess.check_call([sys.executable, "-m", "pip", "install", package])
-
-try:
-    from bs4 import BeautifulSoup
-except ModuleNotFoundError:
-    install("beautifulsoup4")
-    from bs4 import BeautifulSoup
-
-
 import streamlit as st
 import requests
 from bs4 import BeautifulSoup
