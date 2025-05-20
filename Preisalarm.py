@@ -208,7 +208,38 @@ def show_raw_response(url):
     with st.expander("Raw HTML Response"):
         st.code(response.text[:5000])
 
-# In den Tabs hinzufügen:
-with tab4:
-    if st.checkbox("Debug-Modus aktivieren"):
-        show_raw_response(next(iter(produkte_5080.values())))
+# Korrigierte Tab-Definition (ursprüngliche Zeile ersetzen)
+tab1, tab2, tab3, tab4 = st.tabs([
+    "📊 Übersicht", 
+    "⚙️ Einstellungen", 
+    "📈 RTX 5070 Ti", 
+    "📈 RTX 5080"  # ← Stelle sicher dass es genau 4 Tabs gibt
+])
+
+# In der automatischen Update-Sektion (am Ende des Scripts):
+if 'last_update' not in st.session_state:
+    st.session_state.last_update = datetime.min
+
+# Vor dem Aufruf von tab4 muss sichergestellt sein, dass:
+# 1. Alle Tabs korrekt deklariert sind
+# 2. Keine Tabs außerhalb des Hauptbereichs verwendet werden
+
+# Vollständige Korrektur für den Tab-Bereich:
+with tab4:  # ← Dies muss NACH der Tab-Deklaration kommen
+    df = lade_alle_daten()
+    df_5080 = df[df['product'].isin(produkte_5080.keys())]
+    
+    if st.button("RTX 5080 Preise aktualisieren"):
+        with st.spinner("RTX 5080 Preise werden aktualisiert..."):
+            daten = []
+            fortschritt = st.progress(0)
+            for i, (name, url) in enumerate(produkte_5080.items()):
+                preis, datum = robust_scrape(url)
+                if preis:
+                    daten.append({'product': name, 'price': preis, 'date': datum, 'url': url})
+                fortschritt.progress((i + 1) / len(produkte_5080))
+                time.sleep(1)
+            if daten:
+                speichere_tagesdaten(daten)
+                st.success(f"{len(daten)} RTX 5080 Preise aktualisiert!")
+                st.rerun()
