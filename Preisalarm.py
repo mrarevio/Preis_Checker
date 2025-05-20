@@ -103,14 +103,22 @@ tab1, tab2 = st.tabs(["5070 Ti", "5080"])
 
 with tab1:
     st.header("Preisübersicht für 5070 Ti")
-    daten_5070ti = [{'product': name, 'price': *robust_scrape(url), 'url': url} for name, url in produkte_5070ti.items()]
+    daten_5070ti = []
+    for name, url in produkte_5070ti.items():
+        preis, datum = robust_scrape(url)
+        if preis is not None:
+            daten_5070ti.append({'product': name, 'price': preis, 'date': datum, 'url': url})
     speichere_tagesdaten(daten_5070ti, os.path.join(DATA_DIR, "preise_5070ti.json"))
     df_5070ti = lade_daten(os.path.join(DATA_DIR, "preise_5070ti.json"))
     show_prices(df_5070ti)
 
 with tab2:
     st.header("Preisübersicht für 5080")
-    daten_5080 = [{'product': name, 'price': *robust_scrape(url), 'url': url} for name, url in produkte_5080.items()]
+    daten_5080 = []
+    for name, url in produkte_5080.items():
+        preis, datum = robust_scrape(url)
+        if preis is not None:
+            daten_5080.append({'product': name, 'price': preis, 'date': datum, 'url': url})
     speichere_tagesdaten(daten_5080, os.path.join(DATA_DIR, "preise_5080.json"))
     df_5080 = lade_daten(os.path.join(DATA_DIR, "preise_5080.json"))
     show_prices(df_5080)
