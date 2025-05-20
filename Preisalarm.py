@@ -90,26 +90,21 @@ produkte_5080 = {
 }
 
 def robust_scrape(url, max_retries=3):
-    scraper = cloudscraper.create_scraper()
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
-                      '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
-    }
-
+    headers = {'User-Agent': 'Mozilla/5.0'}
     for attempt in range(max_retries):
         try:
-            res = scraper.get(url, headers=headers, timeout=10)
+            res = requests.get(url, headers=headers, timeout=10)
             res.raise_for_status()
             soup = BeautifulSoup(res.text, 'html.parser')
-
-            preis_element = (
-                soup.find('strong', id='pricerange-min') or
-                soup.find('span', class_='price') or
-                soup.find('div', class_='gh_price')
-            )
-
+            
+            # Mehrere mögliche Preis-Elemente überprüfen
+            preis_element = (soup.find('strong', id='pricerange-min') or 
+                             soup.find('span', class_='price') or
+                             soup.find('div', class_='gh_price'))
+            
             if preis_element:
                 preis_text = preis_element.get_text(strip=True)
+                # Robustere Preisbereinigung
                 preis = float(''.join(c for c in preis_text if c.isdigit() or c in ',.').replace('.', '').replace(',', '.'))
                 datum = datetime.now(TIMEZONE)
                 return preis, datum
