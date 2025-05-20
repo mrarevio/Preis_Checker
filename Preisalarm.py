@@ -6,11 +6,9 @@ from datetime import datetime, timedelta
 import plotly.express as px
 import os
 import time
-import smtplib
-from email.message import EmailMessage
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-import cloudscraper  # ← NEU hinzugefügt
+import cloudscraper  # neuer Import
 
 # ========== KONFIGURATION ==========
 TIMEZONE = None
@@ -31,44 +29,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-st.markdown(f"""
-    <style>
-        .main {{
-            background-color: {bg_color};
-            color: {text_color};
-            font-family: {font};
-        }}
-        .stButton>button {{
-            background-color: {primary_color};
-            color: white;
-            border-radius: 5px;
-            padding: 0.5rem 1rem;
-            transition: background-color 0.3s ease;
-        }}
-        .stButton>button:hover {{
-            background-color: #FF6464; /* Hellerer Farbton bei Hover */
-        }}
-        .stAlert {{
-            border-left: 4px solid {primary_color};
-        }}
-        .stProgress > div > div > div {{
-            background-color: {primary_color};
-        }}
-        h1, h2, h3 {{
-            font-family: 'Arial', sans-serif;
-            font-weight: bold;
-        }}
-        .css-1aumxhk {{
-            background-color: #FFF; /* Kartenhintergrund */
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-        }}
-    </style>
-""", unsafe_allow_html=True)
-# ... (Design-Einstellungen und Imports bleiben gleich)
-
-# ========== PRODUKTLISTE ==========
+# ========== PRODUKTLISTEN ==========
 produkte_5070ti = {
     "Gainward RTX 5070 Ti": "https://geizhals.at/gainward-geforce-rtx-5070-ti-v186843.html",
     "MSI RTX 5070 Ti": "https://geizhals.at/msi-geforce-rtx-5070-ti-v186766.html",
@@ -78,168 +39,78 @@ produkte_5070ti = {
     "ASUS ROG Strix": "https://geizhals.at/asus-rog-strix-geforce-rtx-5070-ti-oc-a3382464.html",
     "Palit GamingPro V1": "https://geizhals.at/palit-geforce-rtx-5070-ti-gamingpro-v1-ne7507t019t2-gb2031y-a3470756.html",
     "Palit GamingPro OC V1": "https://geizhals.at/palit-geforce-rtx-5070-ti-gamingpro-oc-v1-ne7507ts19t2-gb2031y-a3470759.html"
-    # ... (bestehende 5070 Ti Einträge)
 }
-
 
 produkte_5080 = {
     "Palit GeForce RTX 5080 GamingPro V1": "https://geizhals.at/palit-geforce-rtx-5080-gamingpro-v1-ne75080019t2-gb2031y-a3487808.html",
     "Zotac GeForce RTX 5080": "https://geizhals.at/zotac-geforce-rtx-5080-v186817.html",
     "INNO3D GeForce RTX 5080 X3": "https://geizhals.at/inno3d-geforce-rtx-5080-x3-n50803-16d7-176068n-a3382794.html",
-    "Gainward GeForce RTX 5080 Phoenix GS V1,": "https://geizhals.at/gainward-geforce-rtx-5080-phoenix-v1-5615-ne75080s19t2-gb2031c-a3491334.html",
-    "Palit GeForce RTX 5080 GamingPro,": "https://geizhals.at/palit-geforce-rtx-5080-gamingpro-ne75080019t2-gb2031a-a3382521.html",
+    "Gainward GeForce RTX 5080 Phoenix GS V1": "https://geizhals.at/gainward-geforce-rtx-5080-phoenix-v1-5615-ne75080s19t2-gb2031c-a3491334.html",
+    "Palit GeForce RTX 5080 GamingPro": "https://geizhals.at/palit-geforce-rtx-5080-gamingpro-ne75080019t2-gb2031a-a3382521.html",
     "ZOTAC RTX 5080": "https://www.idealo.at/preisvergleich/OffersOfProduct/205789430_-geforce-rtx-5080-zotac.html",
     "Palit RTX 5080 GamingPro OC": "https://www.idealo.at/preisvergleich/OffersOfProduct/205796824_-geforce-rtx-5080-gamingpro-oc-palit.html",
     "Gainward RTX 5080": "https://www.idealo.at/preisvergleich/OffersOfProduct/205796547_-geforce-rtx-5080-gainward.html",
     "Gainward RTX 5080 Phoenix": "https://www.idealo.at/preisvergleich/OffersOfProduct/205796554_-geforce-rtx-5080-phoenix-gainward.html"
 }
 
-# ========== PERFORMANCE OPTIMIERUNGEN ==========
-SESSION = requests.Session()
-SCRAPER = cloudscraper.create_scraper(
-    browser={
-        'browser': 'chrome',
-        'platform': 'windows',
-        'desktop': True
-    }
-)
-HEADERS = {
-    'Accept-Language': 'de-DE,de;q=0.9',
-    'Referer': 'https://www.google.com/',
-    'DNT': '1'
-}
-
 def robust_scrape(url, max_retries=3):
-    try:
-        # Unterschiedliche Behandlung für Geizhals/Idealo
-        if "idealo" in url:
-            return handle_idealo_scrape(url)
-        else:
-            return handle_geizhals_scrape(url)
-    except Exception as e:
-        st.error(f"Critical error: {str(e)}")
-        return None, None
+    scraper = cloudscraper.create_scraper()
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+                      '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+    }
 
-def handle_idealo_scrape(url):
-    response = SCRAPER.get(url, headers=HEADERS, timeout=15)
-    response.raise_for_status()
-    
-    soup = BeautifulSoup(response.text, 'html.parser')
-    
-    # Neuer Parser für Idealo
-    price_container = soup.find('div', {'class': 'offerList-item-price'})
-    if price_container:
-        price_text = price_container.find('span', {'class': 'price'}).get_text(strip=True)
-        price = float(''.join(c for c in price_text if c.isdigit() or c == ',').replace(',', '.'))
-        return price, datetime.now(TIMEZONE)
-    
+    for attempt in range(max_retries):
+        try:
+            res = scraper.get(url, headers=headers, timeout=10)
+            res.raise_for_status()
+            soup = BeautifulSoup(res.text, 'html.parser')
+
+            preis_element = (
+                soup.find('strong', id='pricerange-min') or
+                soup.find('span', class_='price') or
+                soup.find('div', class_='gh_price')
+            )
+
+            if preis_element:
+                preis_text = preis_element.get_text(strip=True)
+                preis = float(''.join(c for c in preis_text if c.isdigit() or c in ',.').replace('.', '').replace(',', '.'))
+                datum = datetime.now(TIMEZONE)
+                return preis, datum
+        except Exception as e:
+            print(f"Fehler bei Versuch {attempt + 1}: {e}")
+            time.sleep(2 ** attempt)
     return None, None
 
-def handle_geizhals_scrape(url):
-    response = SCRAPER.get(url, headers=HEADERS, timeout=15)
-    response.raise_for_status()
-    
-    soup = BeautifulSoup(response.text, 'html.parser')
-    preis_element = soup.find('span', class_='price') or soup.find('div', class_='gh_price')
-    
-    if preis_element:
-        price_text = preis_element.get_text(strip=True)
-        price = float(''.join(c for c in price_text if c.isdigit() or c in ',.').replace('.', '').replace(',', '.'))
-        return price, datetime.now(TIMEZONE)
-    
-    return None, None
+def speichere_tagesdaten(daten, dateiname):
+    df = pd.DataFrame(daten)
+    vorhanden = pd.read_json(dateiname) if os.path.exists(dateiname) else pd.DataFrame()
+    aktualisiert = pd.concat([vorhanden, df])
+    aktualisiert.to_json(dateiname, orient='records', indent=2)
 
-# ========== PARALLELE VERARBEITUNG ==========
-from concurrent.futures import ThreadPoolExecutor
+def lade_daten(dateiname):
+    return pd.read_json(dateiname) if os.path.exists(dateiname) else pd.DataFrame()
 
-def batch_scrape(products):
-    results = []
-    with ThreadPoolExecutor(max_workers=4) as executor:
-        futures = []
-        for name, url in products.items():
-            futures.append(executor.submit(scrape_product, name, url))
-        
-        for future in futures:
-            result = future.result()
-            if result:
-                results.append(result)
-    return results
+def show_prices(df):
+    if df.empty:
+        st.info("Noch keine Daten verfügbar.")
+    else:
+        st.dataframe(df[['product', 'price', 'date', 'url']], use_container_width=True)
 
-def scrape_product(name, url):
-    try:
-        preis, datum = robust_scrape(url)
-        if preis:
-            return {'product': name, 'price': preis, 'date': datum, 'url': url}
-        return None
-    except Exception as e:
-        st.error(f"Fehler bei {name}: {str(e)}")
-        return None
+st.title("💻 GPU Preis-Tracker Pro")
 
-# ========== AKTUALISIERUNGSFUNKTIONEN ==========
-def update_prices(products, progress_bar):
-    daten = batch_scrape(products)
-    if daten:
-        speichere_tagesdaten(daten)
-        progress_bar.progress(1.0)
-        time.sleep(0.5)
-        return len(daten)
-    return 0
+tab1, tab2 = st.tabs(["5070 Ti", "5080"])
 
-# ========== DASHBOARD ANPASSUNGEN ==========
-# In den Update-Buttons ersetzen durch:
-if st.button("RTX 5080 Preise aktualisieren"):
-    with st.spinner("RTX 5080 Preise werden aktualisiert..."):
-        progress_bar = st.progress(0)
-        count = update_prices(produkte_5080, progress_bar)
-        if count > 0:
-            st.success(f"{count} RTX 5080 Preise aktualisiert!")
-            st.rerun()
-        else:
-            st.error("Fehler beim Aktualisieren der RTX 5080 Preise!")
+with tab1:
+    st.header("Preisübersicht für 5070 Ti")
+    daten_5070ti = [{'product': name, 'price': *robust_scrape(url), 'url': url} for name, url in produkte_5070ti.items()]
+    speichere_tagesdaten(daten_5070ti, os.path.join(DATA_DIR, "preise_5070ti.json"))
+    df_5070ti = lade_daten(os.path.join(DATA_DIR, "preise_5070ti.json"))
+    show_prices(df_5070ti)
 
-# ========== CACHE OPTIMIERUNG ==========
-@st.cache_resource(ttl=3600)
-def load_cached_data():
-    return lade_alle_daten()
-
-# ========== DEBUGGING TOOLS ==========
-def show_raw_response(url):
-    response = SCRAPER.get(url, headers=HEADERS)
-    with st.expander("Raw HTML Response"):
-        st.code(response.text[:5000])
-
-# Korrigierte Tab-Definition (ursprüngliche Zeile ersetzen)
-tab1, tab2, tab3, tab4 = st.tabs([
-    "📊 Übersicht", 
-    "⚙️ Einstellungen", 
-    "📈 RTX 5070 Ti", 
-    "📈 RTX 5080"  # ← Stelle sicher dass es genau 4 Tabs gibt
-])
-
-# In der automatischen Update-Sektion (am Ende des Scripts):
-if 'last_update' not in st.session_state:
-    st.session_state.last_update = datetime.min
-
-# Vor dem Aufruf von tab4 muss sichergestellt sein, dass:
-# 1. Alle Tabs korrekt deklariert sind
-# 2. Keine Tabs außerhalb des Hauptbereichs verwendet werden
-
-# Vollständige Korrektur für den Tab-Bereich:
-with tab4:  # ← Dies muss NACH der Tab-Deklaration kommen
-    df = lade_alle_daten()
-    df_5080 = df[df['product'].isin(produkte_5080.keys())]
-    
-    if st.button("RTX 5080 Preise aktualisieren"):
-        with st.spinner("RTX 5080 Preise werden aktualisiert..."):
-            daten = []
-            fortschritt = st.progress(0)
-            for i, (name, url) in enumerate(produkte_5080.items()):
-                preis, datum = robust_scrape(url)
-                if preis:
-                    daten.append({'product': name, 'price': preis, 'date': datum, 'url': url})
-                fortschritt.progress((i + 1) / len(produkte_5080))
-                time.sleep(1)
-            if daten:
-                speichere_tagesdaten(daten)
-                st.success(f"{len(daten)} RTX 5080 Preise aktualisiert!")
-                st.rerun()
+with tab2:
+    st.header("Preisübersicht für 5080")
+    daten_5080 = [{'product': name, 'price': *robust_scrape(url), 'url': url} for name, url in produkte_5080.items()]
+    speichere_tagesdaten(daten_5080, os.path.join(DATA_DIR, "preise_5080.json"))
+    df_5080 = lade_daten(os.path.join(DATA_DIR, "preise_5080.json"))
+    show_prices(df_5080)
