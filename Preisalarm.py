@@ -308,7 +308,7 @@ def show_historical_prices(df):
 
 st.title("💻 GPU Preis-Tracker Pro")
 
-tab1, tab2, tab3 = st.tabs(["5070 Ti", "5080", "📈 Preis-Dashboard"])
+tab3, tab2, tab1 = st.tabs(["5070 Ti", "5080", "📈 Preis-Dashboard"])
 
 # === TAB 1: 5070 Ti Preisübersicht ===
 with tab1:
