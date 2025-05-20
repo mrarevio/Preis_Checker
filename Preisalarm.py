@@ -68,7 +68,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ========== PRODUKTLISTE ==========
-produkte = {
+produkte_5070ti = {
     "Gainward RTX 5070 Ti": "https://geizhals.at/gainward-geforce-rtx-5070-ti-v186843.html",
     "MSI RTX 5070 Ti": "https://geizhals.at/msi-geforce-rtx-5070-ti-v186766.html",
     "Palit RTX 5070 Ti": "https://geizhals.at/palit-geforce-rtx-5070-ti-v186845.html",
@@ -79,17 +79,18 @@ produkte = {
     "Palit GamingPro OC V1": "https://geizhals.at/palit-geforce-rtx-5070-ti-gamingpro-oc-v1-ne7507ts19t2-gb2031y-a3470759.html"
 }
 
+produkte_5080 = {
+    "ZOTAC RTX 5080": "https://www.idealo.at/preisvergleich/OffersOfProduct/205789430_-geforce-rtx-5080-zotac.html",
+    "Palit RTX 5080 GamingPro OC": "https://www.idealo.at/preisvergleich/OffersOfProduct/205796824_-geforce-rtx-5080-gamingpro-oc-palit.html",
+    "Gainward RTX 5080": "https://www.idealo.at/preisvergleich/OffersOfProduct/205796547_-geforce-rtx-5080-gainward.html",
+    "Gainward RTX 5080 Phoenix": "https://www.idealo.at/preisvergleich/OffersOfProduct/205796554_-geforce-rtx-5080-phoenix-gainward.html"
+}
+
 def clean_data(df):
     # Standardisieren Sie Produktnamen
     name_mapping = {
-        "Gainward RTX 5070 Ti": "GAINWARD GeForce RTX 5070 Ti Phoenix V1 16G",
-        "MSI RTX 5070 Ti": "MSI GeForce RTX 5070 Ti 16G GAMING TRIO OC 16GB",
-        "Palit RTX 5070 Ti": "Palit GeForce RTX 5070 Ti GamingPro V1 16GB",
-        "Gainward Phoenix": "Gainward GeForce RTX 5070 Ti Phoenix V1 16GB",
-        "MSI Gaming Trio": "MSI GeForce RTX 5070 Ti 16G Gaming Trio OC",
-        "ASUS ROG Strix": "ASUS ROG Strix GeForce RTX 5070 Ti OC",
-        "Palit GamingPro V1": "Palit GeForce RTX 5070 Ti GamingPro V1",
-        "Palit GamingPro OC V1": "Palit GeForce RTX 5070 Ti GamingPro OC V1",
+        **{k: k for k in produkte_5070ti.keys()},
+        **{k: k for k in produkte_5080.keys()}
     }
 
     if 'product' in df.columns:
@@ -118,11 +119,21 @@ def robust_scrape(url, max_retries=3):
             res.raise_for_status()
             soup = BeautifulSoup(res.text, 'html.parser')
 
+            # Für Geizhals
             preis_element = (
                 soup.find('strong', id='pricerange-min') or
                 soup.find('span', class_='price') or
                 soup.find('div', class_='gh_price')
             )
+            
+            # Für Idealo
+            if not preis_element:
+                preis_element = soup.find('div', {'class': 'offerList-item-price'})
+                if preis_element:
+                    preis_text = preis_element.get_text(strip=True)
+                    preis = float(''.join(c for c in preis_text if c.isdigit() or c in ',.').replace('.', '').replace(',', '.'))
+                    datum = datetime.now(TIMEZONE)
+                    return preis, datum
 
             if preis_element:
                 preis_text = preis_element.get_text(strip=True)
@@ -161,8 +172,8 @@ def lade_alle_daten():
     return pd.concat(alle_daten, ignore_index=True) if alle_daten else pd.DataFrame()
 
 # Funktion zum Anzeigen des Preisverlaufs
-def show_price_trend(df):
-    st.subheader("📈 Preisverlauf")
+def show_price_trend(df, title="📈 Preisverlauf"):
+    st.subheader(title)
     if not df.empty:
         df['date'] = pd.to_datetime(df['date'])
         df = df.sort_values('date')
@@ -170,7 +181,8 @@ def show_price_trend(df):
         ausgewählte_produkte = st.multiselect(
             "Modelle auswählen",
             options=df['product'].unique(),
-            default=df['product'].unique()[:3]
+            default=df['product'].unique()[:3],
+            key=f"multiselect_{title}"
         )
 
         if ausgewählte_produkte:
@@ -189,7 +201,7 @@ def show_price_trend(df):
                 ))
 
             fig.update_layout(
-                title="Preisverlauf der GPUs",
+                title=f"Preisverlauf der {title} GPUs",
                 xaxis_title="Datum",
                 yaxis_title="Preis (€)",
                 hovermode="x unified",
@@ -202,12 +214,13 @@ def show_price_trend(df):
             st.info("Bitte wähle mindestens ein Modell aus, um den Preisverlauf anzuzeigen.")
 
 # Funktion zum Anzeigen historischer Preise
-def show_historical_prices(df):
-    st.subheader("📜 Historische Preise")
+def show_historical_prices(df, title="📜 Historische Preise"):
+    st.subheader(title)
     if not df.empty:
         ausgewähltes_produkt = st.selectbox(
             "Wähle ein Produkt aus",
-            options=df['product'].unique()
+            options=df['product'].unique(),
+            key=f"selectbox_{title}"
         )
 
         historisch_df = df[df['product'] == ausgewähltes_produkt]
@@ -222,7 +235,7 @@ def show_historical_prices(df):
 # ========== DASHBOARD ==========
 st.title("💻 GPU Preis-Tracker Pro")
 
-tab1, tab2, tab3 = st.tabs(["📊 Übersicht", "⚙️ Einstellungen", "📈 Analyse"])
+tab1, tab2, tab3, tab4 = st.tabs(["📊 Übersicht", "⚙️ Einstellungen", "📈 RTX 5070 Ti", "📈 RTX 5080"])
 
 # === TAB 1: Übersicht ===
 with tab1:
@@ -246,15 +259,23 @@ with tab1:
                 st.info("Noch keine Daten verfügbar")
 
         st.subheader("🔄 Schnellaktionen")
-        if st.button("Preise jetzt aktualisieren"):
+        if st.button("Alle Preise jetzt aktualisieren"):
             with st.spinner("Preise werden aktualisiert..."):
                 daten = []
                 fortschritt = st.progress(0)
-                for i, (name, url) in enumerate(produkte.items()):
+                # 5070 Ti Modelle
+                for i, (name, url) in enumerate(produkte_5070ti.items()):
                     preis, datum = robust_scrape(url)
                     if preis:
                         daten.append({'product': name, 'price': preis, 'date': datum, 'url': url})
-                    fortschritt.progress((i + 1) / len(produkte))
+                    fortschritt.progress((i + 1) / (len(produkte_5070ti) + len(produkte_5080)))
+                    time.sleep(1)
+                # 5080 Modelle
+                for i, (name, url) in enumerate(produkte_5080.items(), start=len(produkte_5070ti)):
+                    preis, datum = robust_scrape(url)
+                    if preis:
+                        daten.append({'product': name, 'price': preis, 'date': datum, 'url': url})
+                    fortschritt.progress((i + 1) / (len(produkte_5070ti) + len(produkte_5080)))
                     time.sleep(1)
                 if daten:
                     speichere_tagesdaten(daten)
@@ -262,7 +283,9 @@ with tab1:
                     st.rerun()
 
     with col2:
-        show_price_trend(lade_alle_daten())  # Preisverlauf anzeigen
+        df = lade_alle_daten()
+        if not df.empty:
+            show_price_trend(df, "📈 Preisverlauf aller GPUs")
 
 # === TAB 2: Einstellungen ===
 with tab2:
@@ -285,22 +308,79 @@ with tab2:
             }
             st.success("Einstellungen gespeichert!")
 
-# === TAB 3: Analyse ===
+# === TAB 3: RTX 5070 Ti ===
 with tab3:
     df = lade_alle_daten()
-    if not df.empty:
-        show_historical_prices(df)  # Historische Preise anzeigen
-
-        st.subheader("📊 Analyse")
-        df['date'] = pd.to_datetime(df['date'])
-        st.dataframe(df.sort_values('date', ascending=False), use_container_width=True)
+    df_5070ti = df[df['product'].isin(produkte_5070ti.keys())]
+    
+    if st.button("RTX 5070 Ti Preise aktualisieren"):
+        with st.spinner("RTX 5070 Ti Preise werden aktualisiert..."):
+            daten = []
+            fortschritt = st.progress(0)
+            for i, (name, url) in enumerate(produkte_5070ti.items()):
+                preis, datum = robust_scrape(url)
+                if preis:
+                    daten.append({'product': name, 'price': preis, 'date': datum, 'url': url})
+                fortschritt.progress((i + 1) / len(produkte_5070ti))
+                time.sleep(1)
+            if daten:
+                speichere_tagesdaten(daten)
+                st.success(f"{len(daten)} RTX 5070 Ti Preise aktualisiert!")
+                st.rerun()
+    
+    if not df_5070ti.empty:
+        show_price_trend(df_5070ti, "📈 RTX 5070 Ti Preisverlauf")
+        show_historical_prices(df_5070ti, "📜 RTX 5070 Ti Historische Preise")
+        
+        st.subheader("📊 RTX 5070 Ti Analyse")
+        df_5070ti['date'] = pd.to_datetime(df_5070ti['date'])
+        st.dataframe(df_5070ti.sort_values('date', ascending=False), use_container_width=True)
 
         st.subheader("Statistik")
-        stats = df.groupby('product')['price'].agg(['min', 'max', 'mean', 'last'])
+        stats = df_5070ti.groupby('product')['price'].agg(['min', 'max', 'mean', 'last'])
         st.dataframe(stats.style.format("{:.2f}€"), use_container_width=True)
 
-        fig = px.box(df, x="product", y="price", color="product")
+        fig = px.box(df_5070ti, x="product", y="price", color="product")
         st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("Keine Daten für RTX 5070 Ti verfügbar")
+
+# === TAB 4: RTX 5080 ===
+with tab4:
+    df = lade_alle_daten()
+    df_5080 = df[df['product'].isin(produkte_5080.keys())]
+    
+    if st.button("RTX 5080 Preise aktualisieren"):
+        with st.spinner("RTX 5080 Preise werden aktualisiert..."):
+            daten = []
+            fortschritt = st.progress(0)
+            for i, (name, url) in enumerate(produkte_5080.items()):
+                preis, datum = robust_scrape(url)
+                if preis:
+                    daten.append({'product': name, 'price': preis, 'date': datum, 'url': url})
+                fortschritt.progress((i + 1) / len(produkte_5080))
+                time.sleep(1)
+            if daten:
+                speichere_tagesdaten(daten)
+                st.success(f"{len(daten)} RTX 5080 Preise aktualisiert!")
+                st.rerun()
+    
+    if not df_5080.empty:
+        show_price_trend(df_5080, "📈 RTX 5080 Preisverlauf")
+        show_historical_prices(df_5080, "📜 RTX 5080 Historische Preise")
+        
+        st.subheader("📊 RTX 5080 Analyse")
+        df_5080['date'] = pd.to_datetime(df_5080['date'])
+        st.dataframe(df_5080.sort_values('date', ascending=False), use_container_width=True)
+
+        st.subheader("Statistik")
+        stats = df_5080.groupby('product')['price'].agg(['min', 'max', 'mean', 'last'])
+        st.dataframe(stats.style.format("{:.2f}€"), use_container_width=True)
+
+        fig = px.box(df_5080, x="product", y="price", color="product")
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("Keine Daten für RTX 5080 verfügbar")
 
 # === AUTOMATISCHES UPDATE ===
 if 'last_update' not in st.session_state:
@@ -309,7 +389,14 @@ if 'last_update' not in st.session_state:
 if (datetime.now() - st.session_state.last_update) > timedelta(hours=24):
     with st.spinner("Tägliches Update läuft..."):
         auto_data = []
-        for name, url in produkte.items():
+        # 5070 Ti Modelle
+        for name, url in produkte_5070ti.items():
+            preis, datum = robust_scrape(url)
+            if preis:
+                auto_data.append({'product': name, 'price': preis, 'date': datum, 'url': url})
+                time.sleep(1)
+        # 5080 Modelle
+        for name, url in produkte_5080.items():
             preis, datum = robust_scrape(url)
             if preis:
                 auto_data.append({'product': name, 'price': preis, 'date': datum, 'url': url})
