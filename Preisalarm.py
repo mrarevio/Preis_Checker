@@ -342,7 +342,6 @@ with tab2:
     st.dataframe(df_5080[['product', 'price', 'date', 'url']], use_container_width=True)
 
 # === TAB 3: Preis-Dashboard ===
-# === TAB 3: Preis-Dashboard ===
 with tab3:
     df = pd.concat([df_5070ti, df_5080], ignore_index=True)
     if not df.empty:
@@ -371,15 +370,15 @@ with tab3:
         with quick_col1:
             if st.button("Alle RTX 5070 Ti Modelle", key="all_5070"):
                 st.session_state.selected_products = list(produkte_5070ti.keys())
-                st.experimental_rerun()
+                st.rerun()
         with quick_col2:
             if st.button("Alle RTX 5080 Modelle", key="all_5080"):
                 st.session_state.selected_products = list(produkte_5080.keys())
-                st.experimental_rerun()
+                st.rerun()
         with quick_col3:
             if st.button("Auswahl zurücksetzen", key="reset_selection"):
                 st.session_state.selected_products = []
-                st.experimental_rerun()
+                  st.rerun()
 
         # Show the price trend with the selected timeframe
         try:
