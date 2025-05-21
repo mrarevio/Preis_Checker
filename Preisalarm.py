@@ -378,7 +378,7 @@ with tab3:
         with quick_col3:
             if st.button("Auswahl zurücksetzen", key="reset_selection"):
                 st.session_state.selected_products = []
-                  st.rerun()
+                  st.experimental_rerun()
 
         # Show the price trend with the selected timeframe
         try:
