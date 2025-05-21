@@ -208,10 +208,11 @@ def show_price_trend(df, selected_timeframe):
         )
         
         # Update session state only if we have selected products
-        if ausgewählte_produkte:
-            if 'selected_products' not in st.session_state or ausgewählte_produkte != st.session_state.selected_products:
-                st.session_state.selected_products = ausgewählte_produkte
-                st.rerun()
+if ausgewählte_produkte:
+    if set(ausgewählte_produkte) != set(st.session_state.selected_products):
+        st.session_state.selected_products = ausgewählte_produkte
+        st.rerun()
+
 
         if ausgewählte_produkte:
             gefiltert = df[df['product'].isin(ausgewählte_produkte)]
