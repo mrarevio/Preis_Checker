@@ -196,11 +196,21 @@ def show_price_trend(df, selected_timeframe):
         elif selected_timeframe == "1 Jahr":
             df = filter_timeframe(df, 365)
 
+        # Initialize session state for selected products if not exists
+        if 'selected_products' not in st.session_state:
+            st.session_state.selected_products = df['product'].unique()[:3]
+        
         ausgewählte_produkte = st.multiselect(
             "Modelle auswählen",
             options=df['product'].unique(),
-            default=df['product'].unique()[:3]
+            default=st.session_state.selected_products,
+            key="product_selection"
         )
+        
+        # Update session state when selection changes
+        if ausgewählte_produkte != st.session_state.selected_products:
+            st.session_state.selected_products = ausgewählte_produkte
+            st.rerun()
 
         if ausgewählte_produkte:
             gefiltert = df[df['product'].isin(ausgewählte_produkte)]
