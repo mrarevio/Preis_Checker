@@ -370,11 +370,11 @@ with tab3:
         with quick_col1:
             if st.button("Alle RTX 5070 Ti Modelle", key="all_5070"):
                 st.session_state.selected_products = list(produkte_5070ti.keys())
-                st.rerun()
+                st.experimental_rerun()
         with quick_col2:
             if st.button("Alle RTX 5080 Modelle", key="all_5080"):
                 st.session_state.selected_products = list(produkte_5080.keys())
-                st.rerun()
+                st.experimental_rerun()
         with quick_col3:
             if st.button("Auswahl zurücksetzen", key="reset_selection"):
                 st.session_state.selected_products = []
