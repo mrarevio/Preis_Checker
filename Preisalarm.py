@@ -342,6 +342,7 @@ with tab2:
     st.dataframe(df_5080[['product', 'price', 'date', 'url']], use_container_width=True)
 
 # === TAB 3: Preis-Dashboard ===
+# === TAB 3: Preis-Dashboard ===
 with tab3:
     df = pd.concat([df_5070ti, df_5080], ignore_index=True)
     if not df.empty:
@@ -364,45 +365,79 @@ with tab3:
         
         st.markdown(f"### 📊 Preis-Dashboard - {st.session_state.timeframe}")
         
+        # Schnellzugriff für GPU-Serien
+        st.subheader("Schnellauswahl")
+        quick_col1, quick_col2, quick_col3 = st.columns(3)
+        with quick_col1:
+            if st.button("Alle RTX 5070 Ti Modelle", key="all_5070"):
+                st.session_state.selected_products = list(produkte_5070ti.keys())
+                st.experimental_rerun()
+        with quick_col2:
+            if st.button("Alle RTX 5080 Modelle", key="all_5080"):
+                st.session_state.selected_products = list(produkte_5080.keys())
+                st.experimental_rerun()
+        with quick_col3:
+            if st.button("Auswahl zurücksetzen", key="reset_selection"):
+                st.session_state.selected_products = []
+                st.experimental_rerun()
+
         # Show the price trend with the selected timeframe
         try:
-            if not df.empty:
-                # Datenaufbereitung
-                df['date'] = pd.to_datetime(df['date'])
-                df = df.sort_values('date')
-                
-                # Zeitfilterung
-                if st.session_state.timeframe == "1 Woche":
-                    df = filter_timeframe(df, 7)
-                elif st.session_state.timeframe == "1 Monat":
-                    df = filter_timeframe(df, 30)
-                elif st.session_state.timeframe == "1 Jahr":
-                    df = filter_timeframe(df, 365)
+            # Datenaufbereitung
+            df['date'] = pd.to_datetime(df['date'])
+            df = df.sort_values('date')
+            
+            # Zeitfilterung
+            if st.session_state.timeframe == "1 Woche":
+                df = filter_timeframe(df, 7)
+            elif st.session_state.timeframe == "1 Monat":
+                df = filter_timeframe(df, 30)
+            elif st.session_state.timeframe == "1 Jahr":
+                df = filter_timeframe(df, 365)
 
-                # Initialisiere Session State für ausgewählte Produkte
-                if 'selected_products' not in st.session_state:
-                    available_products = df['product'].unique()
-                    st.session_state.selected_products = available_products[:min(3, len(available_products))]
+            # Initialisiere Session State für ausgewählte Produkte
+            if 'selected_products' not in st.session_state:
+                available_products = df['product'].unique()
+                st.session_state.selected_products = available_products[:min(3, len(available_products))]
 
-                # Produktauswahl
-                ausgewählte_produkte = st.multiselect(
-                    "Modelle auswählen",
-                    options=df['product'].unique(),
-                    default=st.session_state.selected_products,
-                    key="product_selection_multiselect"
-                )
+            # Produktauswahl mit eindeutigem Key
+            ausgewählte_produkte = st.multiselect(
+                "Modelle auswählen",
+                options=df['product'].unique(),
+                default=st.session_state.selected_products,
+                key="product_multiselect_unique_key"
+            )
 
-                # Aktualisiere Session State nur wenn nötig
-                if ausgewählte_produkte and ('selected_products' not in st.session_state or 
-                                           set(ausgewählte_produkte) != set(st.session_state.selected_products)):
-                    st.session_state.selected_products = ausgewählte_produkte
+            # Aktualisiere Session State bei Änderungen
+            if 'selected_products' not in st.session_state or set(ausgewählte_produkte) != set(st.session_state.selected_products):
+                st.session_state.selected_products = ausgewählte_produkte
+                if st.session_state.get('auto_rerun', True):
+                    st.session_state.auto_rerun = False
                     st.experimental_rerun()
 
-                # Zeige Preiskarten und Diagramm
-                if ausgewählte_produkte:
-                    # Preiskarten
-                    cols = st.columns(len(ausgewählte_produkte))
-                    for idx, produkt in enumerate(ausgewählte_produkte):
+            # Zeige Preiskarten und Diagramm
+            if st.session_state.selected_products:
+                # Preiskarten in einer scrollbaren horizontalen Anordnung
+                st.markdown("""
+                <style>
+                    .horizontal-scroll {
+                        overflow-x: auto;
+                        white-space: nowrap;
+                        padding-bottom: 10px;
+                    }
+                    .price-card-container {
+                        display: inline-block;
+                        margin-right: 15px;
+                        vertical-align: top;
+                    }
+                </style>
+                <div class="horizontal-scroll">
+                """, unsafe_allow_html=True)
+                
+                # Container für die Preiskarten
+                with st.container():
+                    cols = st.columns(len(st.session_state.selected_products))
+                    for idx, produkt in enumerate(st.session_state.selected_products):
                         pdata = df[df['product'] == produkt]
                         if not pdata.empty:
                             current_price = pdata.iloc[-1]['price']
@@ -420,74 +455,117 @@ with tab3:
                                         <p>Keine Vergleichsdaten</p>
                                     </div>
                                     """, unsafe_allow_html=True)
+                
+                st.markdown("</div>", unsafe_allow_html=True)
 
-                    # Interaktives Diagramm
-                    fig = make_subplots(specs=[[{"secondary_y": False}]])
-                    
-                    for produkt in ausgewählte_produkte:
-                        pdata = df[df['product'] == produkt]
-                        fig.add_trace(go.Scatter(
-                            x=pdata['date'],
-                            y=pdata['price'],
-                            name=produkt,
-                            mode='lines+markers',
-                            line=dict(width=2),
-                            marker=dict(size=8),
-                            hoverinfo='text',
-                            hovertext=[f"{produkt}<br>{x.date()}<br>{y:.2f}€" for x, y in zip(pdata['date'], pdata['price'])]
-                        ))
+                # Interaktives Diagramm
+                fig = make_subplots(specs=[[{"secondary_y": False}]])
+                
+                for produkt in st.session_state.selected_products:
+                    pdata = df[df['product'] == produkt]
+                    fig.add_trace(go.Scatter(
+                        x=pdata['date'],
+                        y=pdata['price'],
+                        name=produkt,
+                        mode='lines+markers',
+                        line=dict(width=2),
+                        marker=dict(size=8),
+                        hoverinfo='text',
+                        hovertext=[f"{produkt}<br>{x.date()}<br>{y:.2f}€" for x, y in zip(pdata['date'], pdata['price'])]
+                    ))
 
-                    fig.update_layout(
-                        title=f"Preisverlauf der GPUs - {st.session_state.timeframe}",
-                        xaxis_title="Datum",
-                        yaxis_title="Preis (€)",
-                        hovermode="x unified",
-                        plot_bgcolor='rgba(0,0,0,0)',
-                        paper_bgcolor='rgba(0,0,0,0)',
-                        font=dict(color=text_color),
-                        height=500
+                fig.update_layout(
+                    title=f"Preisverlauf der ausgewählten GPUs - {st.session_state.timeframe}",
+                    xaxis_title="Datum",
+                    yaxis_title="Preis (€)",
+                    hovermode="x unified",
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    font=dict(color=text_color),
+                    height=500
+                )
+                
+                fig.update_layout(
+                    xaxis=dict(
+                        rangeselector=dict(
+                            buttons=list([
+                                dict(count=7, label="1W", step="day", stepmode="backward"),
+                                dict(count=1, label="1M", step="month", stepmode="backward"),
+                                dict(count=6, label="6M", step="month", stepmode="backward"),
+                                dict(count=1, label="1J", step="year", stepmode="backward"),
+                                dict(label="Alles", step="all")
+                            ])
+                        ),
+                        rangeslider=dict(visible=True),
+                        type="date"
                     )
-                    
-                    fig.update_layout(
-                        xaxis=dict(
-                            rangeselector=dict(
-                                buttons=list([
-                                    dict(count=7, label="1W", step="day", stepmode="backward"),
-                                    dict(count=1, label="1M", step="month", stepmode="backward"),
-                                    dict(count=6, label="6M", step="month", stepmode="backward"),
-                                    dict(count=1, label="1J", step="year", stepmode="backward"),
-                                    dict(label="Alles", step="all")
-                                ])
-                            ),
-                            rangeslider=dict(visible=True),
-                            type="date"
-                        )
-                    )
-                    
-                    st.plotly_chart(fig, use_container_width=True)
-                else:
-                    st.info("Bitte wähle mindestens ein Modell aus, um den Preisverlauf anzuzeigen.")
+                )
+                
+                st.plotly_chart(fig, use_container_width=True)
             else:
-                st.warning("Keine Daten verfügbar für den ausgewählten Zeitraum.")
+                st.info("Bitte wähle mindestens ein Modell aus, um den Preisverlauf anzuzeigen.")
+
         except Exception as e:
             st.error(f"Fehler beim Anzeigen des Preisverlaufs: {str(e)}")
-        
+            st.stop()
+
         # Show historical prices
         with st.expander("📜 Detaillierte historische Preise anzeigen"):
             try:
                 show_historical_prices(df)
             except Exception as e:
                 st.error(f"Fehler beim Anzeigen der historischen Preise: {str(e)}")
-        
+
         # Statistics section
         with st.expander("📊 Statistische Analyse"):
             try:
-                st.subheader("Statistik")
-                stats = df.groupby('product')['price'].agg(['min', 'max', 'mean', 'last'])
+                st.subheader("Statistische Übersicht")
+                
+                # Basisstatistiken
+                st.markdown("**Grundlegende Statistiken**")
+                stats = df.groupby('product')['price'].agg(['min', 'max', 'mean', 'last', 'count'])
+                stats.columns = ['Minimalpreis', 'Maximalpreis', 'Durchschnittspreis', 'Aktueller Preis', 'Anzahl Einträge']
                 st.dataframe(stats.style.format("{:.2f}€"), use_container_width=True)
 
-                fig = px.box(df, x="product", y="price", color="product")
-                st.plotly_chart(fig, use_container_width=True)
+                # Boxplot für Preisverteilung
+                st.markdown("**Preisverteilung**")
+                fig_box = px.box(df, x="product", y="price", color="product", 
+                                points="all", hover_data=["date"])
+                st.plotly_chart(fig_box, use_container_width=True)
+
+                # Preisänderungen der letzten 7/30 Tage
+                st.markdown("**Preisänderungen**")
+                change_col1, change_col2 = st.columns(2)
+                with change_col1:
+                    st.markdown("**Letzte 7 Tage**")
+                    changes_7d = []
+                    for product in df['product'].unique():
+                        pdata = df[df['product'] == product]
+                        change, pct_change = calculate_price_change(pdata, product, 7)
+                        if change is not None:
+                            changes_7d.append({
+                                'Modell': product,
+                                'Änderung (€)': change,
+                                'Änderung (%)': pct_change
+                            })
+                    if changes_7d:
+                        st.dataframe(pd.DataFrame(changes_7d), use_container_width=True)
+                
+                with change_col2:
+                    st.markdown("**Letzte 30 Tage**")
+                    changes_30d = []
+                    for product in df['product'].unique():
+                        pdata = df[df['product'] == product]
+                        change, pct_change = calculate_price_change(pdata, product, 30)
+                        if change is not None:
+                            changes_30d.append({
+                                'Modell': product,
+                                'Änderung (€)': change,
+                                'Änderung (%)': pct_change
+                            })
+                    if changes_30d:
+                        st.dataframe(pd.DataFrame(changes_30d), use_container_width=True)
+
             except Exception as e:
                 st.error(f"Fehler bei der statistischen Analyse: {str(e)}")
 
@@ -497,21 +575,28 @@ if 'last_update' not in st.session_state:
 
 if (datetime.now() - st.session_state.last_update) > timedelta(hours=24):
     with st.spinner("Tägliches Update läuft..."):
-        auto_data_5070ti = []
-        for name, url in produkte_5070ti.items():
-            preis, datum = robust_scrape(url)
-            if preis is not None:
-                auto_data_5070ti.append({'product': name, 'price': preis, 'date': datum, 'url': url})
-            time.sleep(1)
-        speichere_tagesdaten(auto_data_5070ti, os.path.join(DATA_DIR, "preise_5070ti.json"))
-        
-        auto_data_5080 = []
-        for name, url in produkte_5080.items():
-            preis, datum = robust_scrape(url)
-            if preis is not None:
-                auto_data_5080.append({'product': name, 'price': preis, 'date': datum, 'url': url})
-            time.sleep(1)
-        speichere_tagesdaten(auto_data_5080, os.path.join(DATA_DIR, "preise_5080.json"))
+        try:
+            # Update 5070 Ti Daten
+            auto_data_5070ti = []
+            for name, url in produkte_5070ti.items():
+                preis, datum = robust_scrape(url)
+                if preis is not None:
+                    auto_data_5070ti.append({'product': name, 'price': preis, 'date': datum, 'url': url})
+                time.sleep(1)
+            speichere_tagesdaten(auto_data_5070ti, os.path.join(DATA_DIR, "preise_5070ti.json"))
+            
+            # Update 5080 Daten
+            auto_data_5080 = []
+            for name, url in produkte_5080.items():
+                preis, datum = robust_scrape(url)
+                if preis is not None:
+                    auto_data_5080.append({'product': name, 'price': preis, 'date': datum, 'url': url})
+                time.sleep(1)
+            speichere_tagesdaten(auto_data_5080, os.path.join(DATA_DIR, "preise_5080.json"))
 
-        st.session_state.last_update = datetime.now()
-        st.rerun()
+            st.session_state.last_update = datetime.now()
+            st.session_state.auto_rerun = True
+            st.rerun()
+            
+        except Exception as e:
+            st.error(f"Fehler beim automatischen Update: {str(e)}")
