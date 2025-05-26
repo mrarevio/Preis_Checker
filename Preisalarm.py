@@ -340,8 +340,15 @@ with tab2:
             daten_5080.append({'product': name, 'price': preis, 'date': datum, 'url': url})
         time.sleep(2)  # Pause hinzufügen
     speichere_tagesdaten(daten_5080, os.path.join(DATA_DIR, "preise_5080.json"))
-    df_5080 = lade_daten(os.path.join(DATA_DIR, "preise_5080.json"))
-    st.dataframe(df_5080[['product', 'price', 'date', 'url']], use_container_width=True)
+df_5080 = lade_daten(os.path.join(DATA_DIR, "preise_5080.json"))
+
+# Sicherstellen, dass alle erwarteten Spalten vorhanden sind
+for col in ['product', 'price', 'date', 'url']:
+    if col not in df_5080.columns:
+        df_5080[col] = None  # fehlende Spalte mit None füllen
+
+st.dataframe(df_5080[['product', 'price', 'date', 'url']], use_container_width=True)
+
 
 
 # === TAB 3: Preis-Dashboard ===
