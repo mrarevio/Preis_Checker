@@ -339,7 +339,7 @@ with tab2:
         if preis is not None:
             daten_5080.append({'product': name, 'price': preis, 'date': datum, 'url': url})
         time.sleep(2)  # Pause hinzufügen
-    speichere_tagesdaten(daten_5070ti, os.path.join(DATA_DIR, "preise_5080.json"))
+    speichere_tagesdaten(daten_5080, os.path.join(DATA_DIR, "preise_5080.json"))
     df_5080 = lade_daten(os.path.join(DATA_DIR, "preise_5080.json"))
     st.dataframe(df_5080[['product', 'price', 'date', 'url']], use_container_width=True)
 
@@ -376,7 +376,7 @@ with tab3:
                 st.rerun()
         with col2:
             if st.button("Alle RTX 5080 Modelle"):
-                st.session_state.selected_products = [p for p in df['product'].unique() if "5080" in p]
+                st.session_state.selected_products = [p for p in df['product'].unique() if isinstance(p, str) and "5080" in p]
                 st.rerun()
         with col3:
             if st.button("Auswahl zurücksetzen"):
