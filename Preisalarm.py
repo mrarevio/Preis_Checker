@@ -347,7 +347,13 @@ with tab2:
 
 # === TAB 3: Preis-Dashboard ===
 with tab3:
-    df = pd.concat([df_5070ti, df_5080], ignore_index=True)
+    # Daten laden / aktualisieren beim Button-Klick
+    if 'df_tab3' not in st.session_state or st.button("Aktualisieren", key="refresh_btn"):
+        st.session_state.df_tab3 = pd.concat([df_5070ti, df_5080], ignore_index=True)
+        st.success("Daten aktualisiert")
+
+    df = st.session_state.df_tab3
+
     if not df.empty:
         # Timeframe selection
         st.subheader("Zeitraum auswählen")
@@ -361,10 +367,10 @@ with tab3:
         with col3:
             if st.button("1 Jahr", key="year_btn"):
                 st.session_state.timeframe = "1 Jahr"
-        
+
         if 'timeframe' not in st.session_state:
             st.session_state.timeframe = "1 Monat"
-        
+
         st.markdown(f"### 📊 Preis-Dashboard - {st.session_state.timeframe}")
 
         # Schnellauswahl Buttons
@@ -373,28 +379,28 @@ with tab3:
         with col1:
             if st.button("Alle RTX 5070 Ti Modelle"):
                 st.session_state.selected_products = [p for p in df['product'].unique() if "5070" in p]
-                st.rerun()
+                st.experimental_rerun()
         with col2:
             if st.button("Alle RTX 5080 Modelle"):
                 st.session_state.selected_products = [p for p in df['product'].unique() if isinstance(p, str) and "5080" in p]
-                st.rerun()
+                st.experimental_rerun()
         with col3:
             if st.button("Auswahl zurücksetzen"):
                 st.session_state.selected_products = []
-                st.rerun()
+                st.experimental_rerun()
 
         try:
             # Datenaufbereitung
             df['date'] = pd.to_datetime(df['date'])
             df = df.sort_values('date')
-            
+
             # Zeitfilterung mit expliziter Bedingung
             days = 7 if st.session_state.timeframe == "1 Woche" else 30 if st.session_state.timeframe == "1 Monat" else 365
             cutoff_date = datetime.now() - timedelta(days=days)
             mask = df['date'] >= cutoff_date
             df_filtered = df[mask].copy()
 
-            # Produktauswahl
+            # Produktauswahl initialisieren
             if 'selected_products' not in st.session_state:
                 st.session_state.selected_products = df['product'].unique()[:3]
 
@@ -405,10 +411,10 @@ with tab3:
                 key="model_selection"
             )
 
-            # Update selection only if changed
+            # Auswahl aktualisieren bei Änderung
             if set(auswahl) != set(st.session_state.get('selected_products', [])):
                 st.session_state.selected_products = auswahl
-                st.rerun()
+                st.experimental_rerun()
 
             # Nur fortfahren wenn Produkte ausgewählt sind
             if not st.session_state.selected_products:
@@ -424,7 +430,7 @@ with tab3:
                     if not produkt_daten.empty:
                         current_price = produkt_daten.iloc[-1]['price']
                         price_change, pct_change = calculate_price_change(produkt_daten, produkt, days)
-                        
+
                         if price_change is not None and pct_change is not None:
                             create_price_card(produkt, current_price, price_change, pct_change)
                         else:
@@ -439,7 +445,7 @@ with tab3:
             # Diagramm erstellen
             st.subheader("Preisverlauf")
             fig = go.Figure()
-            
+
             for produkt in st.session_state.selected_products:
                 produkt_daten = df_filtered[df_filtered['product'] == produkt]
                 if not produkt_daten.empty:
@@ -477,3 +483,4 @@ with tab3:
                 st.dataframe(stats.style.format("{:.2f}"))
             except Exception as e:
                 st.error(f"Fehler bei Statistiken: {str(e)}")
+
