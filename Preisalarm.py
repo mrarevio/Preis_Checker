@@ -23,7 +23,7 @@ text_color = "#333"
 font = "Helvetica Neue, sans-serif"
 
 st.set_page_config(
-    page_title="GPU Preis-Tracker Pro",
+    page_title="GPU Preis-Tracker Pro-Alpha",
     page_icon="💻",
     layout="wide",
     initial_sidebar_state="expanded"
