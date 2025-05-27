@@ -113,11 +113,10 @@ def robust_scrape(url, max_retries=3):
     for attempt in range(max_retries):
         try:
             res = scraper.get(url, headers=headers, timeout=10)
-            res.raise_for_status()
+            res.raise_for_status()  # Raise an error for bad responses
             soup = BeautifulSoup(res.text, 'html.parser')
-
             preis_element = (
-                soup.find('strong', id='pricerange-min') or
+                soup.find('strong', {'id': 'pricerange-min'}) or
                 soup.find('span', class_='price') or
                 soup.find('div', class_='gh_price')
             )
@@ -125,8 +124,11 @@ def robust_scrape(url, max_retries=3):
             if preis_element:
                 preis_text = preis_element.get_text(strip=True)
                 preis = float(''.join(c for c in preis_text if c.isdigit() or c in ',.').replace('.', '').replace(',', '.'))
-                datum = datetime.now(TIMEZONE)
+                datum = datetime.now(TIMEZONE)  # Aktuelles Datum
                 return preis, datum
+        except requests.exceptions.RequestException as e:
+            print(f"Fehler beim Scrapen von {url}: {e}")
+            time.sleep(10)  # Wartezeit, um Anfragen zu streuen bei Rate Limit
         except Exception as e:
             print(f"Fehler bei Versuch {attempt + 1}: {e}")
             time.sleep(2 ** attempt)  # Exponentielles Backoff
@@ -143,184 +145,53 @@ def speichere_tagesdaten(daten, dateipfad):
 def lade_daten(dateipfad):
     return pd.read_json(dateipfad) if os.path.exists(dateipfad) else pd.DataFrame()
 
-def filter_timeframe(df, days):
-    if df.empty:
-        return df
-    cutoff_date = datetime.now() - timedelta(days=days)
-    return df[df['date'] >= cutoff_date.strftime('%Y-%m-%d')]
+# === SCRAPING UND DATEN SPEICHERN ===
+# Scraping Daten für 5070 Ti
+daten_5070ti = []
+for name, url in produkte_5070ti.items():
+    preis, datum = robust_scrape(url)
+    if preis is not None:
+        daten_5070ti.append({'product': name, 'price': preis, 'date': datum, 'url': url})
+    time.sleep(random.uniform(1, 3))  # Zufällige Pause zwischen den Anfragen
+speichere_tagesdaten(daten_5070ti, os.path.join(DATA_DIR, "preise_5070ti.json"))
 
-def calculate_price_change(df, product, days):
-    if df.empty:
-        return None, None
-    
-    product_data = df[df['product'] == product].sort_values('date')
-    if len(product_data) < 2:
-        return None, None
-    
-    current_price = product_data.iloc[-1]['price']
-    
-    cutoff_date = datetime.now() - timedelta(days=days)
-    past_data = product_data[product_data['date'] >= cutoff_date.strftime('%Y-%m-%d')]
-    
-    if len(past_data) == 0:
-        return None, None
-    
-    past_price = past_data.iloc[0]['price']
-    price_change = current_price - past_price
-    percent_change = (price_change / past_price) * 100
-    
-    return price_change, percent_change
+# Scraping Daten für 5080
+daten_5080 = []
+for name, url in produkte_5080.items():
+    preis, datum = robust_scrape(url)
+    if preis is not None:
+        daten_5080.append({'product': name, 'price': preis, 'date': datum, 'url': url})
+    time.sleep(random.uniform(1, 3))  # Zufällige Pause zwischen den Anfragen
+speichere_tagesdaten(daten_5080, os.path.join(DATA_DIR, "preise_5080.json"))
 
-def create_price_card(product, current_price, price_change, percent_change):
-    change_direction = "positive" if price_change > 0 else "negative"
-    change_icon = "📈" if price_change > 0 else "📉"
-    
-    st.markdown(f"""
-    <div class="price-card">
-        <h3>{product}</h3>
-        <h2>{current_price:.2f}€</h2>
-        <p>{change_icon} <span class="price-change-{change_direction}">
-        {price_change:+.2f}€ ({percent_change:+.2f}%)</span></p>
-    </div>
-    """, unsafe_allow_html=True)
+# Daten laden
+df_5070ti = lade_daten(os.path.join(DATA_DIR, "preise_5070ti.json"))
+df_5080 = lade_daten(os.path.join(DATA_DIR, "preise_5080.json"))
 
-def show_price_trend(df, selected_timeframe):
-    if not df.empty:
-        df['date'] = pd.to_datetime(df['date'])
-        df = df.sort_values('date')
-        
-        # Filter data based on selected timeframe
-        if selected_timeframe == "1 Woche":
-            df = filter_timeframe(df, 7)
-        elif selected_timeframe == "1 Monat":
-            df = filter_timeframe(df, 30)
-        elif selected_timeframe == "1 Jahr":
-            df = filter_timeframe(df, 365)
-
-        # Initialize session state for selected products if not exists
-        if 'selected_products' not in st.session_state:
-            st.session_state.selected_products = df['product'].unique()[:3]  # Default selection
-
-        ausgewählte_produkte = st.multiselect(
-            "Modelle auswählen",
-            options=df['product'].unique(),
-            default=st.session_state.selected_products,
-            key="product_selection"
-        )
-        
-        # Update session state only if we have selected products
-        if ausgewählte_produkte:
-            st.session_state.selected_products = ausgewählte_produkte
-
-        if ausgewählte_produkte:
-            gefiltert = df[df['product'].isin(ausgewählte_produkte)]
-            
-            # Create price cards for selected products
-            cols = st.columns(len(ausgewählte_produkte))
-            for idx, produkt in enumerate(ausgewählte_produkte):
-                pdata = gefiltert[gefiltert['product'] == produkt]
-                if not pdata.empty:
-                    current_price = pdata.iloc[-1]['price']
-                    price_change, percent_change = calculate_price_change(pdata, produkt, 
-                                                                        7 if selected_timeframe == "1 Woche" else 
-                                                                        30 if selected_timeframe == "1 Monat" else 365)
-                    
-                    with cols[idx]:
-                        if price_change is not None and percent_change is not None:
-                            create_price_card(produkt, current_price, price_change, percent_change)
-                        else:
-                            st.markdown(f"""
-                            <div class="price-card">
-                                <h3>{produkt}</h3>
-                                <h2>{current_price:.2f}€</h2>
-                                <p>Keine Vergleichsdaten</p>
-                            </div>
-                            """, unsafe_allow_html=True)
-
-            # Interactive price trend chart
-            fig = go.Figure()
-            for produkt in ausgewählte_produkte:
-                pdata = gefiltert[gefiltert['product'] == produkt]
-                if not pdata.empty:
-                    fig.add_trace(go.Scatter(
-                        x=pdata['date'],
-                        y=pdata['price'],
-                        name=produkt,
-                        mode='lines+markers'
-                    ))
-
-            fig.update_layout(
-                title=f"Preisverlauf - {selected_timeframe}",
-                xaxis_title="Datum",
-                yaxis_title="Preis (€)",
-                hovermode="x unified"
-            )
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.info("Bitte wähle mindestens ein Modell aus, um den Preisverlauf anzuzeigen.")
-
-def show_historical_prices(df):
-    if not df.empty:
-        ausgewähltes_produkt = st.selectbox(
-            "Wähle ein Produkt aus",
-            options=df['product'].unique()
-        )
-
-        historisch_df = df[df['product'] == ausgewähltes_produkt]
-
-        if not historisch_df.empty:
-            historisch_df['date'] = pd.to_datetime(historisch_df['date'])
-            historisch_df = historisch_df.sort_values('date', ascending=False)
-
-            # Calculate price changes
-            historisch_df['price_change'] = historisch_df['price'].diff(-1)
-            historisch_df['percent_change'] = (historisch_df['price_change'] / historisch_df['price'].shift(-1)) * 100
-
-            # Format the display
-            display_df = historisch_df[['date', 'price', 'price_change', 'percent_change']].copy()
-            display_df['price'] = display_df['price'].apply(lambda x: f"{x:.2f}€")
-            display_df['price_change'] = display_df['price_change'].apply(lambda x: f"{x:+.2f}€" if pd.notnull(x) else "")
-            display_df['percent_change'] = display_df['percent_change'].apply(lambda x: f"{x:+.2f}%" if pd.notnull(x) else "")
-            
-            st.dataframe(display_df, use_container_width=True)
-        else:
-            st.info("Keine historischen Daten für das gewählte Produkt verfügbar.")
-
-st.title("💻 GPU Preis-Tracker Pro")
-
-tab1, tab2, tab3 = st.tabs(["5070 Ti", "5080", "📈 Preis-Dashboard"])
+# ========== STREAMLIT TABS ==========
+tab1, tab2, tab3 = st.tabs(["5070 Ti Übersicht", "5080 Übersicht", "Preis-Dashboard"])
 
 # === TAB 1: 5070 Ti Preisübersicht ===
 with tab1:
     st.header("Preisübersicht für 5070 Ti")
-    daten_5070ti = []
-    for name, url in produkte_5070ti.items():
-        preis, datum = robust_scrape(url)
-        if preis is not None:
-            daten_5070ti.append({'product': name, 'price': preis, 'date': datum, 'url': url})
-        time.sleep(random.uniform(1, 3))  # Zufällige Pause zwischen den Anfragen
-    speichere_tagesdaten(daten_5070ti, os.path.join(DATA_DIR, "preise_5070ti.json"))
-    df_5070ti = lade_daten(os.path.join(DATA_DIR, "preise_5070ti.json"))
-    st.dataframe(df_5070ti[['product', 'price', 'date', 'url']], use_container_width=True)
+    if not df_5070ti.empty:
+        st.dataframe(df_5070ti[['product', 'price', 'date', 'url']], use_container_width=True)
+    else:
+        st.warning("Keine Preisdaten für RTX 5070 Ti verfügbar.")
 
 # === TAB 2: 5080 Preisübersicht ===
 with tab2:
     st.header("Preisübersicht für 5080")
-    daten_5080 = []
-    for name, url in produkte_5080.items():
-        preis, datum = robust_scrape(url)
-        if preis is not None:
-            daten_5080.append({'product': name, 'price': preis, 'date': datum, 'url': url})
-        time.sleep(random.uniform(1, 3))  # Zufällige Pause zwischen den Anfragen
-    speichere_tagesdaten(daten_5080, os.path.join(DATA_DIR, "preise_5080.json"))
-    df_5080 = lade_daten(os.path.join(DATA_DIR, "preise_5080.json"))
-    st.dataframe(df_5080[['product', 'price', 'date', 'url']], use_container_width=True)
+    if not df_5080.empty:
+        st.dataframe(df_5080[['product', 'price', 'date', 'url']], use_container_width=True)
+    else:
+        st.warning("Keine Preisdaten für RTX 5080 verfügbar.")
 
 # === TAB 3: Preis-Dashboard ===
 with tab3:
     st.header("Preis-Dashboard")
-    if not df_5070ti.empty or not df_5080.empty:
-        combined_df = pd.concat([df_5070ti, df_5080], ignore_index=True)
+    combined_df = pd.concat([df_5070ti, df_5080], ignore_index=True)
+    if not combined_df.empty:
         st.dataframe(combined_df[['product', 'price', 'date']], use_container_width=True)
         
         # Hier können Sie zusätzliche Analysen oder Grafiken hinzufügen
