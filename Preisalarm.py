@@ -17,7 +17,6 @@ os.makedirs(DATA_DIR, exist_ok=True)
 
 # ========== DESIGN-EINSTELLUNGEN ==========
 primary_color = "#FF4B4B"
-secondary_color = "#1F77B4"
 bg_color = "#F4F4F4"
 text_color = "#333"
 font = "Helvetica Neue, sans-serif"
@@ -42,43 +41,6 @@ st.markdown(f"""
             border-radius: 5px;
             padding: 0.5rem 1rem;
             transition: background-color 0.3s ease;
-        }}
-        .stButton>button:hover {{
-            background-color: #FF6464;
-        }}
-        .stAlert {{
-            border-left: 4px solid {primary_color};
-        }}
-        .stProgress > div > div > div {{
-            background-color: {primary_color};
-        }}
-        h1, h2, h3 {{
-            font-family: 'Arial', sans-serif;
-            font-weight: bold;
-        }}
-        .css-1aumxhk {{
-            background-color: #FFF;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-        }}
-        .timeframe-btn {{
-            margin: 5px !important;
-        }}
-        .price-card {{
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 15px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }}
-        .price-change-positive {{
-            color: #e74c3c;
-            font-weight: bold;
-        }}
-        .price-change-negative {{
-            color: #2ecc71;
-            font-weight: bold;
         }}
     </style>
 """, unsafe_allow_html=True)
