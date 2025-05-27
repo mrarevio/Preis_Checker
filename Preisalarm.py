@@ -106,37 +106,39 @@ produkte_5080 = {
 def robust_scrape(url):
     scraper = cloudscraper.create_scraper()
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
-                      '(KHTML, like Gecko) Chrome/85.0.4183.121 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0'
     }
     
     try:
         res = scraper.get(url, headers=headers, timeout=10)
-        res.raise_for_status()
+        res.raise_for_status()  # Raise an error for bad responses
         soup = BeautifulSoup(res.text, 'html.parser')
         preis_element = soup.find('strong', {'id': 'pricerange-min'}) or soup.find('span', class_='price')
         
         if preis_element:
             preis_text = preis_element.get_text(strip=True)
             preis = float(''.join(filter(str.isdigit, preis_text)))/100  # Umwandlung in Float
-            datum = datetime.now(TIMEZONE)
+            datum = datetime.now()
             return preis, datum
     except requests.exceptions.RequestException as e:
-        print(f"An error occurred while scraping {url}: {e}")
+        print(f"Fehler beim Scrapen von {url}: {e}")
     return None, None
 
 def speichere_tagesdaten(daten, dateipfad):
     df = pd.DataFrame(daten)
     if not df.empty:
-        # vorhandene Daten laden, falls verfügbar
-        vorhanden = pd.read_json(dateipfad) if os.path.exists(dateipfad) else pd.DataFrame()
-        aktualisiert = pd.concat([vorhanden, df])
+        if os.path.exists(dateipfad):
+            vorhanden = pd.read_json(dateipfad)
+            aktualisiert = pd.concat([vorhanden, df], ignore_index=True)
+        else:
+            aktualisiert = df
         aktualisiert.to_json(dateipfad, orient='records', indent=2)
 
 def lade_daten(dateipfad):
     return pd.read_json(dateipfad) if os.path.exists(dateipfad) else pd.DataFrame()
 
-# === Preisübersicht für 5070 Ti ===
+# ========== HAUPTLOGIK ==========
+# Scraping Daten für 5070 Ti
 daten_5070ti = []
 for name, url in produkte_5070ti.items():
     preis, datum = robust_scrape(url)
@@ -144,7 +146,7 @@ for name, url in produkte_5070ti.items():
         daten_5070ti.append({'product': name, 'price': preis, 'date': datum, 'url': url})
 speichere_tagesdaten(daten_5070ti, os.path.join(DATA_DIR, "preise_5070ti.json"))
 
-# === Preisübersicht für 5080 ===
+# Scraping Daten für 5080
 daten_5080 = []
 for name, url in produkte_5080.items():
     preis, datum = robust_scrape(url)
@@ -152,22 +154,31 @@ for name, url in produkte_5080.items():
         daten_5080.append({'product': name, 'price': preis, 'date': datum, 'url': url})
 speichere_tagesdaten(daten_5080, os.path.join(DATA_DIR, "preise_5080.json"))
 
-# Daten laden und anzeigen
+# Daten laden
 df_5070ti = lade_daten(os.path.join(DATA_DIR, "preise_5070ti.json"))
 df_5080 = lade_daten(os.path.join(DATA_DIR, "preise_5080.json"))
 
-# Daten anzeigen
-st.title("💻 GPU Preis-Tracker Pro")
-st.header("Preisübersicht für 5070 Ti")
-st.dataframe(df_5070ti[['product', 'price', 'date', 'url']], use_container_width=True)
+# ========== STREAMLIT TABS ==========
+tab1, tab2, tab3 = st.tabs(["5070 Ti Übersicht", "5080 Übersicht", "Preis-Dashboard"])
 
-st.header("Preisübersicht für 5080")
-st.dataframe(df_5080[['product', 'price', 'date', 'url']], use_container_width=True)
+with tab1:
+    st.header("Preisübersicht für 5070 Ti")
+    if not df_5070ti.empty:
+        st.dataframe(df_5070ti[['product', 'price', 'date', 'url']], use_container_width=True)
+    else:
+        st.warning("Keine Preisdaten für rtx 5070 Ti verfügbar.")
 
-# Preis-Dashboard
-st.subheader("Preis-Dashboard")
-if not df_5070ti.empty or not df_5080.empty:
-    # Preisvisualisierung hier
-    st.success("Preisdaten erfolgreich abgerufen.")
-else:
-    st.warning("Keine Preisdaten verfügbar.")
+with tab2:
+    st.header("Preisübersicht für 5080")
+    if not df_5080.empty:
+        st.dataframe(df_5080[['product', 'price', 'date', 'url']], use_container_width=True)
+    else:
+        st.warning("Keine Preisdaten für rtx 5080 verfügbar.")
+
+with tab3:
+    st.header("Preis-Dashboard")
+    if not df_5070ti.empty or not df_5080.empty:
+        combined_df = pd.concat([df_5070ti, df_5080], ignore_index=True)
+        st.dataframe(combined_df[['product', 'price', 'date']], use_container_width=True)
+    else:
+        st.info("Keine Preisdaten verfügbar.")
