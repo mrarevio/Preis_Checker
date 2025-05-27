@@ -113,7 +113,7 @@ def robust_scrape(url, max_retries=3):
     for attempt in range(max_retries):
         try:
             res = scraper.get(url, headers=headers, timeout=10)
-            res.raise_for_status()
+            res.raise_for_status()  # Raise an error for bad responses
             soup = BeautifulSoup(res.text, 'html.parser')
             preis_element = (
                 soup.find('strong', {'id': 'pricerange-min'}) or
@@ -123,14 +123,14 @@ def robust_scrape(url, max_retries=3):
 
             if preis_element:
                 preis_text = preis_element.get_text(strip=True)
-                preis = float(''.join(filter(str.isdigit, preis_text)))/100  # Umwandlung in Float
+                preis = float(''.join(c for c in preis_text if c.isdigit() or c in ',.').replace('.', '').replace(',', '.'))
                 datum = datetime.now()  # Aktuelles Datum
                 return preis, datum
         except requests.exceptions.HTTPError as http_err:
             print(f"HTTP-Fehler: {http_err}")
             if http_err.response.status_code == 429:  # Too Many Requests
                 print("Zu viele Anfragen. Warte...")
-                time.sleep(random.randint(10, 30))  # Wartezeit zufällig erhöhen
+                time.sleep(random.randint(10, 30))  # Warten Sie eine zufällige Zeit zwischen 10 und 30 Sekunden
         except Exception as e:
             print(f"Fehler bei Versuch {attempt + 1}: {e}")
             time.sleep(2 ** attempt)  # Exponentielles Backoff 
@@ -173,20 +173,23 @@ df_5080 = lade_daten(os.path.join(DATA_DIR, "preise_5080.json"))
 # ========== STREAMLIT TABS ==========
 tab1, tab2, tab3 = st.tabs(["5070 Ti Übersicht", "5080 Übersicht", "Preis-Dashboard"])
 
+# === TAB 1: 5070 Ti Preisübersicht ===
 with tab1:
     st.header("Preisübersicht für 5070 Ti")
     if not df_5070ti.empty:
         st.dataframe(df_5070ti[['product', 'price', 'date', 'url']], use_container_width=True)
     else:
-        st.warning("Keine Preisdaten für RTX 5070 Ti verfügbar.")
+        st.warning("Keine Preisdaten für rtx 5070 Ti verfügbar.")
 
+# === TAB 2: 5080 Preisübersicht ===
 with tab2:
     st.header("Preisübersicht für 5080")
     if not df_5080.empty:
         st.dataframe(df_5080[['product', 'price', 'date', 'url']], use_container_width=True)
     else:
-        st.warning("Keine Preisdaten für RTX 5080 verfügbar.")
+        st.warning("Keine Preisdaten für rtx 5080 verfügbar.")
 
+# === TAB 3: Preis-Dashboard ===
 with tab3:
     st.header("Preis-Dashboard")
     combined_df = pd.concat([df_5070ti, df_5080], ignore_index=True)
