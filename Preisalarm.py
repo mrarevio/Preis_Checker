@@ -86,9 +86,11 @@ def robust_scrape(url, max_retries=3):
                 preis = float(''.join(c for c in preis_text if c.isdigit() or c in ',.').replace('.', '').replace(',', '.'))
                 datum = datetime.now(TIMEZONE)  # Aktuelles Datum
                 return preis, datum
-        except requests.exceptions.RequestException as e:
-            print(f"Fehler beim Scrapen von {url}: {e}")
-            time.sleep(10)  # Wartezeit, um Anfragen zu streuen bei Rate Limit
+        except requests.exceptions.HTTPError as http_err:
+            print(f"HTTP-Fehler: {http_err}")
+            if http_err.response.status_code == 429:  # Too Many Requests
+                print("Zu viele Anfragen. Warten...")
+                time.sleep(random.uniform(10, 30))  # Wartezeit zufällig erhöhen
         except Exception as e:
             print(f"Fehler bei Versuch {attempt + 1}: {e}")
             time.sleep(2 ** attempt)  # Exponentielles Backoff
@@ -148,49 +150,15 @@ with tab2:
         st.warning("Keine Preisdaten für RTX 5080 verfügbar.")
 
 # === TAB 3: Preis-Dashboard ===
-# === TAB 3: Preis-Dashboard ===
 with tab3:
-    # Daten laden / aktualisieren beim Button-Klick
-    if 'df_tab3' not in st.session_state or st.button("Aktualisieren", key="refresh_btn"):
-        st.session_state.df_tab3 = pd.concat([df_5070ti, df_5080], ignore_index=True)
-        st.success("Daten aktualisiert")
-
-    df = st.session_state.df_tab3
-
-    if not df.empty:
-        # Timeframe selection
-        st.subheader("Zeitraum auswählen")
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            if st.button("1 Woche", key="week_btn"):
-                st.session_state.timeframe = "1 Woche"
-        with col2:
-            if st.button("1 Monat", key="month_btn"):
-                st.session_state.timeframe = "1 Monat"
-        with col3:
-            if st.button("1 Jahr", key="year_btn"):
-                st.session_state.timeframe = "1 Jahr"
-
-        if 'timeframe' not in st.session_state:
-            st.session_state.timeframe = "1 Monat"
-
-        st.markdown(f"### 📊 Preis-Dashboard - {st.session_state.timeframe}")
-
-        # Schnellauswahl Buttons
-        st.subheader("Schnellauswahl")
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            if st.button("Alle RTX 5070 Ti Modelle"):
-                st.session_state.selected_products = [p for p in df['product'].unique() if "5070" in p]
-                st.experimental_rerun()
-        with col2:
-            if st.button("Alle RTX 5080 Modelle"):
-                st.session_state.selected_products = [p for p in df['product'].unique() if isinstance(p, str) and "5080" in p]
-                st.experimental_rerun()
-        with col3:
-            if st.button("Auswahl zurücksetzen"):
-                st.session_state.selected_products = []
-                st.experimental_rerun()
+    st.header("Preis-Dashboard")
+    combined_df = pd.concat([df_5070ti, df_5080], ignore_index=True)
+    if not combined_df.empty:
+        st.dataframe(combined_df[['product', 'price', 'date']], use_container_width=True)
+        
+        # Hier können Sie weitere Analysen oder Grafiken hinzufügen.
+    else:
+        st.info("Keine Preisdaten verfügbar.")
 
         try:
             # Datenaufbereitung
