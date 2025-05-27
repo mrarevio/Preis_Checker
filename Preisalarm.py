@@ -182,15 +182,15 @@ with tab3:
         with col1:
             if st.button("Alle RTX 5070 Ti Modelle"):
                 st.session_state.selected_products = [p for p in df['product'].unique() if "5070" in p]
-               st.rerun
+                st.experimental_rerun()
         with col2:
             if st.button("Alle RTX 5080 Modelle"):
                 st.session_state.selected_products = [p for p in df['product'].unique() if isinstance(p, str) and "5080" in p]
-               st.rerun
+                st.experimental_rerun()
         with col3:
             if st.button("Auswahl zurücksetzen"):
                 st.session_state.selected_products = []
-               st.rerun
+                st.experimental_rerun()
 
         try:
             # Datenaufbereitung
@@ -217,7 +217,7 @@ with tab3:
             # Auswahl aktualisieren bei Änderung
             if set(auswahl) != set(st.session_state.get('selected_products', [])):
                 st.session_state.selected_products = auswahl
-               st.rerun
+               st.experimental_rerun()
 
             # Nur fortfahren wenn Produkte ausgewählt sind
             if not st.session_state.selected_products:
