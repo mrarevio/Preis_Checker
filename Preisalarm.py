@@ -2,12 +2,10 @@ import streamlit as st
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
-from datetime import datetime, timedelta
-import plotly.express as px
+from datetime import datetime
 import os
 import time
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
+import random
 import cloudscraper
 
 # ========== KONFIGURATION ==========
