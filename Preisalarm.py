@@ -379,15 +379,15 @@ with tab3:
         with col1:
             if st.button("Alle RTX 5070 Ti Modelle"):
                 st.session_state.selected_products = [p for p in df['product'].unique() if "5070" in p]
-                st.experimental_rerun()
+                st.rerun()
         with col2:
             if st.button("Alle RTX 5080 Modelle"):
                 st.session_state.selected_products = [p for p in df['product'].unique() if isinstance(p, str) and "5080" in p]
-                st.experimental_rerun()
+                st.rerun()
         with col3:
             if st.button("Auswahl zurücksetzen"):
                 st.session_state.selected_products = []
-                st.experimental_rerun()
+                st.rerun()
 
         try:
             # Datenaufbereitung
