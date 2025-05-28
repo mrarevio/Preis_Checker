@@ -5,3 +5,4 @@ pandas
 plotly
 cloudscraper
 python-dateutil
+streamlit-aggrid
