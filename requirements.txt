@@ -6,4 +6,3 @@ plotly
 python-dateutil
 cloudscraper
 st-aggrid
-lxml
