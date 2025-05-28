@@ -185,7 +185,12 @@ with tab3:
             # Auswahl aktualisieren bei Änderung
             if set(auswahl) != set(st.session_state.get('selected_products', [])):
                 st.session_state.selected_products = auswahl
-               st.experimental_rerun()
+                st.experimental_rerun()
+
+# Nur fortfahren, wenn Produkte ausgewählt sind
+            if not st.session_state.selected_products:
+                st.warning("Bitte wählen Sie mindestens ein Modell aus")
+                st.stop()
 
             # Nur fortfahren wenn Produkte ausgewählt sind
             if not st.session_state.selected_products:
