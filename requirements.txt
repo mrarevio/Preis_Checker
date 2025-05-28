@@ -3,7 +3,7 @@ requests
 beautifulsoup4
 pandas
 plotly
-cloudscraper
 python-dateutil
-fake-useragent
-streamlit-aggrid
+cloudscraper
+st-aggrid
+lxml
