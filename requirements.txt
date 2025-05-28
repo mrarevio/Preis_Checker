@@ -1,8 +1,7 @@
-streamlit
-requests
-beautifulsoup4
-pandas
-plotly
-cloudscraper
-python-dateutil
-streamlit-aggrid
+streamlit 
+requests 
+beautifulsoup4 
+pandas 
+plotly 
+cloudscraper 
+st-aggrid
