@@ -121,8 +121,8 @@ produkte_5080 = {
     "INNO3D GeForce RTX 5080 X3": "https://geizhals.at/inno3d-geforce-rtx-5080-x3-n50803-16d7-176068n-a3382794.html",
     "Gainward GeForce RTX 5080 Phoenix GS V1": "https://geizhals.at/gainward-geforce-rtx-5080-phoenix-v1-5615-ne75080s19t2-gb2031c-a3491334.html",
     "Palit GeForce RTX 5080 GamingPro": "https://geizhals.at/palit-geforce-rtx-5080-gamingpro-ne75080019t2-gb2031a-a3382521.html",
-    "ASUS ROG Strix RTX 5080 OC": "https://geizhals.at/asus-rog-strix-geforce-rtx-5080-oc-a3382465.html",
-    "MSI GeForce RTX 5080 Gaming X Trio": "https://geizhals.at/msi-geforce-rtx-5080-gaming-x-trio-16g-a3445123.html",
+    "Manli Nebula GeForce RTX 5080": "https://geizhals.at/manli-nebula-geforce-rtx-5080-a3449904.html?hloc=eu&nocookie=1",
+    "MSI GeForce RTX 5080 Gaming X Trio": "https://geizhals.at/msi-geforce-rtx-5080-v186760.html",
     "Gigabyte GeForce RTX 5080 Gaming OC": "https://geizhals.at/gigabyte-geforce-rtx-5080-v186706.html",
 }
 
@@ -368,9 +368,9 @@ def main():
     </div>
     """, unsafe_allow_html=True)
     
-    # Initialisiere Session State
+    # Initialisiere Session State mit ALLEN Produkten
     if 'selected_products' not in st.session_state:
-        st.session_state.selected_products = list(produkte_5080.keys())[:3]
+        st.session_state.selected_products = list(produkte_5080.keys())  # Alle Modelle laden
     
     if 'timeframe' not in st.session_state:
         st.session_state.timeframe = 30  # Standard: 1 Monat
@@ -443,23 +443,30 @@ def main():
             if st.button("1 Jahr", key="year_btn", use_container_width=True):
                 st.session_state.timeframe = 365
         
-        # Produktauswahl
+        # Produktauswahl - Multiselect mit allen vorausgewählten Produkten
         auswahl = st.multiselect(
             "Modelle auswählen",
             options=list(produkte_5080.keys()),
-            default=st.session_state.selected_products,
+            default=st.session_state.selected_products,  # Alle vorausgewählt
             key="product_select"
         )
         
-        if auswahl:
-            st.session_state.selected_products = auswahl
+        # Automatisch alle Produkte auswählen, wenn keine spezifische Auswahl getroffen wurde
+        if not auswahl:
+            auswahl = list(produkte_5080.keys())
         
-        # Preiskarten anzeigen
+        st.session_state.selected_products = auswahl
+        
+        # Preiskarten anzeigen - in zwei Spalten für bessere Lesbarkeit
         if st.session_state.selected_products:
-            cols = st.columns(len(st.session_state.selected_products))
+            # Erstelle zwei Spalten
+            col1, col2 = st.columns(2)
             
             for idx, produkt in enumerate(st.session_state.selected_products):
-                with cols[idx]:
+                # Wechsle zwischen den Spalten
+                current_col = col1 if idx % 2 == 0 else col2
+                
+                with current_col:
                     produkt_daten = [d for d in alle_daten if d['product'] == produkt]
                     if produkt_daten:
                         aktuellster_eintrag = max(produkt_daten, key=lambda x: x['date'])
@@ -476,6 +483,8 @@ def main():
                             prozent,
                             aktuellster_eintrag['shop']
                         )
+                    else:
+                        st.warning(f"Keine Daten für {produkt} verfügbar")
         
         # Preisstatistiken
         st.subheader("Preisstatistiken")
