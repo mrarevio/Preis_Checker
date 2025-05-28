@@ -4,10 +4,5 @@ beautifulsoup4
 pandas
 plotly
 cloudscraper
-python-dateutil
-aiohttp
-cachetools
-fake-useragent
-selenium 
-webdriver_manager
-streamlit-aggrid
+st-aggrid
+cloudscraper
