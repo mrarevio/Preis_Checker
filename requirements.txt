@@ -3,6 +3,5 @@ requests
 beautifulsoup4
 pandas
 plotly
-python-dateutil
 cloudscraper
 st-aggrid
