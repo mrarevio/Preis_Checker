@@ -116,14 +116,14 @@ st.markdown(f"""
 
 # ========== PRODUKTLISTEN ==========
 produkte_5080 = {
-    "Palit GeForce RTX 5080 GamingPro V1": "https://geizhals.at/palit-geforce-rtx-5080-gamingpro-v1-ne75080019t2-gb2031y-a3487808.html",
+    "Palit GeForce RTX 5080 GamingPro V1": "https://geizhals.at/gainward-geforce-rtx-5080-phoenix-v1-5615-ne75080s19t2-gb2031c-a3491334.html",
     "Zotac GeForce RTX 5080": "https://geizhals.at/zotac-geforce-rtx-5080-v186817.html",
     "INNO3D GeForce RTX 5080 X3": "https://geizhals.at/inno3d-geforce-rtx-5080-x3-n50803-16d7-176068n-a3382794.html",
     "Gainward GeForce RTX 5080 Phoenix GS V1": "https://geizhals.at/gainward-geforce-rtx-5080-phoenix-v1-5615-ne75080s19t2-gb2031c-a3491334.html",
     "Palit GeForce RTX 5080 GamingPro": "https://geizhals.at/palit-geforce-rtx-5080-gamingpro-ne75080019t2-gb2031a-a3382521.html",
     "Manli Nebula GeForce RTX 5080": "https://geizhals.at/manli-nebula-geforce-rtx-5080-a3449904.html?hloc=eu&nocookie=1",
-    "MSI GeForce RTX 5080 Gaming X Trio": "https://geizhals.at/msi-geforce-rtx-5080-v186760.html",
-    "Gigabyte GeForce RTX 5080 Gaming OC": "https://geizhals.at/gigabyte-geforce-rtx-5080-v186706.html",
+    "MSI GeForce RTX 5080 16G Shadow 3X OC": "https://geizhals.at/msi-geforce-rtx-5080-16g-shadow-3x-oc-v531-003r-a3448293.html",
+    "Gigabyte GeForce RTX 5080 Gaming OC": "https://geizhals.at/gigabyte-geforce-rtx-5080-windforce-oc-sff-16g-gv-n5080wf3oc-16gd-a3381809.html",
 }
 
 # ========== FUNKTIONEN ==========
